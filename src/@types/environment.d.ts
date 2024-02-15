@@ -15,7 +15,7 @@ declare global {
             ELASTIC_SEARCH_URL: string;
             ELASTIC_APM_SERVER_URL: string;
             ELASTIC_APM_SECRET_TOKEN: string;
-            STRIPE_API_PRIVATE_KEY: string;
+            ELASTIC_APM_SERVICE_NAME: string;
         }
     }
 }
