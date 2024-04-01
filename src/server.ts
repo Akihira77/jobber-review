@@ -14,6 +14,7 @@ import {
     API_GATEWAY_URL,
     ELASTIC_SEARCH_URL,
     JWT_TOKEN,
+    NODE_ENV,
     PORT
 } from "@review/config";
 import {
@@ -31,6 +32,7 @@ import { checkConnection } from "@review/elasticsearch";
 import { appRoutes } from "@review/routes";
 import { createConnection } from "@review/queues/connection";
 import { Channel } from "amqplib";
+import { StatusCodes } from "http-status-codes";
 
 const log: Logger = winstonLogger(
     `${ELASTIC_SEARCH_URL}`,
@@ -102,8 +104,14 @@ function reviewErrorHandler(app: Application): void {
             log.error(`ReviewService ${error.comingFrom}:`, error);
 
             if (error instanceof CustomError) {
-                res.status(error.statusCode).json(error.serializeErrors());
+                res.status(
+                    error.statusCode ?? StatusCodes.INTERNAL_SERVER_ERROR
+                ).json(
+                    error?.serializeErrors() ??
+                        "Unexpected Error Occured. Please Try Again"
+                );
             }
+
             next();
         }
     );
@@ -115,9 +123,11 @@ async function startServer(app: Application): Promise<void> {
 
         log.info(`Review server has started with pid ${process.pid}`);
 
-        httpServer.listen(Number(PORT), () => {
-            log.info(`Review server running on port ${PORT}`);
-        });
+        if (NODE_ENV !== "test") {
+            httpServer.listen(Number(PORT), () => {
+                log.info(`Review server running on port ${PORT}`);
+            });
+        }
     } catch (error) {
         log.error("ReviewService startServer() method error:", error);
     }

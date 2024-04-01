@@ -1,16 +1,11 @@
 import {
     BadRequestError,
     IReviewDocument,
-    IReviewMessageDetails,
     winstonLogger
 } from "@Akihira77/jobber-shared";
-import {
-    ELASTIC_SEARCH_URL,
-    exchangeNamesAndRoutingKeys
-} from "@review/config";
+import { ELASTIC_SEARCH_URL } from "@review/config";
 import { pool } from "@review/database";
-import { publishFanoutMessage } from "@review/queues/review.producer";
-import { reviewChannel } from "@review/server";
+import { reviewSchema } from "@review/schemas/review.schema";
 import { Logger } from "winston";
 
 const logger: Logger = winstonLogger(
@@ -23,6 +18,15 @@ export async function addReview(
     data: IReviewDocument
 ): Promise<IReviewDocument> {
     try {
+        const { error } = reviewSchema.validate(data);
+
+        if (error?.details) {
+            throw new BadRequestError(
+                error.details[0].message,
+                "addReview() method"
+            );
+        }
+
         const {
             gigId,
             rating,
@@ -74,53 +78,80 @@ export async function addReview(
             ]
         );
 
-        const mesageDetails: IReviewMessageDetails = {
-            gigId,
-            reviewerId,
-            sellerId,
-            review,
-            rating,
-            orderId,
-            createdAt: `${createdAtDate}`,
-            type: `${reviewType}`
-        };
-        const { reviewService } = exchangeNamesAndRoutingKeys;
-
-        await publishFanoutMessage(
-            reviewChannel,
-            reviewService.review.exchangeName,
-            JSON.stringify(mesageDetails),
-            "Review details sent to order and users services"
-        );
-
         return rows[0];
     } catch (error) {
-        logger.error(`ReviewService addReview() method error:`, error);
-        throw new BadRequestError("Unexpected Error Occured. Please Try Again", "reviewService addReview()");
+        if (error) {
+            logger?.error(`ReviewService addReview() method error:`, error);
+            throw error;
+        }
+
+        throw new Error("Unexpected Error Occured. Please Try Again");
     }
 }
 
 export async function getReviewsByGigId(
     id: string
 ): Promise<IReviewDocument[]> {
-    const { rows } = await pool.query<IReviewDocument>(
-        `SELECT * FROM "reviews"
+    try {
+        const { rows } = await pool.query<IReviewDocument>(
+            `SELECT * FROM "reviews"
         WHERE "gigId" = $1`,
-        [id]
-    );
+            [id]
+        );
 
-    return rows;
+        return rows;
+    } catch (error) {
+        if (error) {
+            logger?.error(
+                `ReviewService getReviewsByGigId() method error:`,
+                error
+            );
+            throw error;
+        }
+
+        throw new Error("Unexpected Error Occured. Please Try Again");
+    }
 }
 
 export async function getReviewsBySellerId(
     id: string
 ): Promise<IReviewDocument[]> {
-    const { rows } = await pool.query<IReviewDocument>(
-        `SELECT * FROM "reviews"
+    try {
+        const { rows } = await pool.query<IReviewDocument>(
+            `SELECT * FROM "reviews"
         WHERE "sellerId" = $1
         AND "reviewType" = $2`,
-        [id, "seller-review"]
-    );
+            [id, "seller-review"]
+        );
 
-    return rows;
+        return rows;
+    } catch (error) {
+        if (error) {
+            logger?.error(
+                `ReviewService getReviewsBySellerId() method error:`,
+                error
+            );
+            throw error;
+        }
+
+        throw new Error("Unexpected Error Occured. Please Try Again");
+    }
+}
+
+export async function deleteReview(reviewId: number): Promise<boolean> {
+    try {
+        const { rowCount } = await pool.query(
+            `DELETE FROM "reviews" WHERE id = $1`,
+            [reviewId]
+        );
+
+        return rowCount ? rowCount > 0 : false;
+    } catch (error) {
+        if (error) {
+            logger?.error(`ReviewService deleteReview() method error:`, error);
+            throw error;
+        }
+
+        throw new Error("Unexpected Error Occured. Please Try Again");
+    }
 }
