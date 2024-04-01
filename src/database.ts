@@ -1,20 +1,12 @@
-import { winstonLogger } from "@Akihira77/jobber-shared";
-import { Logger } from "winston";
-import { ELASTIC_SEARCH_URL, POSTGRES_DB } from "@review/config";
+import { POSTGRES_DB } from "@review/config";
 import { Pool } from "pg";
-
-const log: Logger = winstonLogger(
-    `${ELASTIC_SEARCH_URL}`,
-    "reviewDatabaseServer",
-    "debug"
-);
 
 export let pool: Pool = new Pool({
     connectionString: `${POSTGRES_DB}`
 });
 
 pool.on("error", (error: Error) => {
-    log.error("pg client error", error);
+    console.log(error);
     process.exit(-1);
 });
 
@@ -43,11 +35,8 @@ const createTableText = `
 export async function databaseConnection(): Promise<void> {
     try {
         await pool.connect();
-
-        log.info("ReviewService database successfully connected");
-
         await pool.query(createTableText);
     } catch (error) {
-        log.error("ReviewService databaseConnection() method error:", error);
+        console.log(error);
     }
 }

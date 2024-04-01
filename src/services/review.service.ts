@@ -1,18 +1,9 @@
 import {
     BadRequestError,
     IReviewDocument,
-    winstonLogger
 } from "@Akihira77/jobber-shared";
-import { ELASTIC_SEARCH_URL } from "@review/config";
 import { pool } from "@review/database";
 import { reviewSchema } from "@review/schemas/review.schema";
-import { Logger } from "winston";
-
-const logger: Logger = winstonLogger(
-    `${ELASTIC_SEARCH_URL}`,
-    "reviewService",
-    "debug"
-);
 
 export async function addReview(
     data: IReviewDocument
@@ -81,7 +72,6 @@ export async function addReview(
         return rows[0];
     } catch (error) {
         if (error) {
-            logger?.error(`ReviewService addReview() method error:`, error);
             throw error;
         }
 
@@ -102,10 +92,6 @@ export async function getReviewsByGigId(
         return rows;
     } catch (error) {
         if (error) {
-            logger?.error(
-                `ReviewService getReviewsByGigId() method error:`,
-                error
-            );
             throw error;
         }
 
@@ -127,10 +113,6 @@ export async function getReviewsBySellerId(
         return rows;
     } catch (error) {
         if (error) {
-            logger?.error(
-                `ReviewService getReviewsBySellerId() method error:`,
-                error
-            );
             throw error;
         }
 
@@ -148,7 +130,6 @@ export async function deleteReview(reviewId: number): Promise<boolean> {
         return rowCount ? rowCount > 0 : false;
     } catch (error) {
         if (error) {
-            logger?.error(`ReviewService deleteReview() method error:`, error);
             throw error;
         }
 
