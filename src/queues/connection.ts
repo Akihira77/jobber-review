@@ -1,4 +1,4 @@
-import {  RABBITMQ_ENDPOINT } from "@review/config";
+import { RABBITMQ_ENDPOINT } from "@review/config";
 import client, { Connection, Channel } from "amqplib";
 
 export async function createConnection(): Promise<Channel | undefined> {

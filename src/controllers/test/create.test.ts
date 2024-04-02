@@ -9,14 +9,11 @@ const reviewApi = "/api/v1/review";
 describe("Review Controller - Create method", () => {
     it("return 400 and error message", async () => {
         const { body, statusCode } = await supertest(serverApp)
-            .post(`${reviewApi}/`)
+            .post(reviewApi)
             .send({});
 
         expect(body).toEqual({
-            comingFrom: "addReview() method",
-            message: '"gigId" is required',
-            status: "error",
-            statusCode: 400
+            message: '"gigId" is required'
         });
         expect(statusCode).toEqual(400);
     });

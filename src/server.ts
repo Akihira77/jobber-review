@@ -6,14 +6,9 @@ import jwt from "jsonwebtoken";
 import {
     CustomError,
     IAuthPayload,
-    IErrorResponse,
+    IErrorResponse
 } from "@Akihira77/jobber-shared";
-import {
-    API_GATEWAY_URL,
-    JWT_TOKEN,
-    NODE_ENV,
-    PORT
-} from "@review/config";
+import { API_GATEWAY_URL, JWT_TOKEN, NODE_ENV, PORT } from "@review/config";
 import {
     Application,
     NextFunction,
@@ -96,10 +91,11 @@ function reviewErrorHandler(app: Application): void {
             if (error instanceof CustomError) {
                 res.status(
                     error.statusCode ?? StatusCodes.INTERNAL_SERVER_ERROR
-                ).json(
-                    error?.serializeErrors() ??
+                ).json({
+                    message:
+                        error?.message ??
                         "Unexpected Error Occured. Please Try Again"
-                );
+                });
             }
 
             next();

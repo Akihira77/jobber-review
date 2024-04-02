@@ -1,7 +1,4 @@
-import {
-    BadRequestError,
-    IReviewDocument,
-} from "@Akihira77/jobber-shared";
+import { BadRequestError, IReviewDocument } from "@Akihira77/jobber-shared";
 import { pool } from "@review/database";
 import { reviewSchema } from "@review/schemas/review.schema";
 
