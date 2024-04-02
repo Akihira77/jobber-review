@@ -13,7 +13,10 @@ describe("Review Controller - Create method", () => {
             .send({});
 
         expect(body).toEqual({
-            message: '"gigId" is required'
+            comingFrom: "addReview() method",
+            message: `"gigId" is required`,
+            status: "error",
+            statusCode: 400
         });
         expect(statusCode).toEqual(400);
     });
