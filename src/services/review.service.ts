@@ -1,4 +1,4 @@
-import { BadRequestError, IReviewDocument } from "@Akihira77/jobber-shared";
+import { BadRequestError, CustomError, IReviewDocument } from "@Akihira77/jobber-shared";
 import { pool } from "@review/database";
 import { reviewSchema } from "@review/schemas/review.schema";
 
@@ -68,7 +68,8 @@ export async function addReview(
 
         return rows[0];
     } catch (error) {
-        if (error) {
+        console.log(error);
+        if (error instanceof CustomError) {
             throw error;
         }
 
@@ -88,10 +89,7 @@ export async function getReviewsByGigId(
 
         return rows;
     } catch (error) {
-        if (error) {
-            throw error;
-        }
-
+        console.log(error);
         throw new Error("Unexpected Error Occured. Please Try Again");
     }
 }
@@ -109,10 +107,7 @@ export async function getReviewsBySellerId(
 
         return rows;
     } catch (error) {
-        if (error) {
-            throw error;
-        }
-
+        console.log(error);
         throw new Error("Unexpected Error Occured. Please Try Again");
     }
 }
@@ -126,10 +121,7 @@ export async function deleteReview(reviewId: number): Promise<boolean> {
 
         return rowCount ? rowCount > 0 : false;
     } catch (error) {
-        if (error) {
-            throw error;
-        }
-
+        console.log(error);
         throw new Error("Unexpected Error Occured. Please Try Again");
     }
 }
