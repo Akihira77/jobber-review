@@ -21,7 +21,7 @@ export async function review(req: Request, res: Response): Promise<void> {
     };
     const { reviewService } = exchangeNamesAndRoutingKeys;
 
-    await publishFanoutMessage(
+    publishFanoutMessage(
         reviewChannel,
         reviewService.review.exchangeName,
         JSON.stringify(mesageDetails),
