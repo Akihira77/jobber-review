@@ -9,7 +9,7 @@ import { StatusCodes } from "http-status-codes";
 export async function review(req: Request, res: Response): Promise<void> {
     const review = await addReview(req.body);
 
-    const mesageDetails: IReviewMessageDetails = {
+    const messageDetails: IReviewMessageDetails = {
         gigId: review.gigId,
         reviewerId: review.reviewerId,
         sellerId: review.sellerId,
@@ -24,7 +24,10 @@ export async function review(req: Request, res: Response): Promise<void> {
     await publishFanoutMessage(
         reviewChannel,
         reviewService.review.exchangeName,
-        JSON.stringify(mesageDetails),
+        JSON.stringify({
+            type: "addReview",
+            messageDetails
+        }),
         "Review details sent to order and users services"
     );
 
