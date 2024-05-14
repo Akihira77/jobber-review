@@ -9,7 +9,7 @@ export async function publishFanoutMessage(
 ): Promise<void> {
     try {
         if (!channel) {
-            channel = (await createConnection()) as Channel;
+            channel = await createConnection();
         }
 
         await channel.assertExchange(exchangeName, "fanout");

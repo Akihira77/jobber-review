@@ -1,20 +1,10 @@
-import { BadRequestError, CustomError, IReviewDocument } from "@Akihira77/jobber-shared";
+import { CustomError, IReviewDocument } from "@Akihira77/jobber-shared";
 import { pool } from "@review/database";
-import { reviewSchema } from "@review/schemas/review.schema";
 
 export async function addReview(
     data: IReviewDocument
 ): Promise<IReviewDocument> {
     try {
-        const { error } = reviewSchema.validate(data);
-
-        if (error?.details) {
-            throw new BadRequestError(
-                error.details[0].message,
-                "addReview() method"
-            );
-        }
-
         const {
             gigId,
             rating,

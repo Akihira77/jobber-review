@@ -1,7 +1,7 @@
 import { RABBITMQ_ENDPOINT } from "@review/config";
 import client, { Connection, Channel } from "amqplib";
 
-export async function createConnection(): Promise<Channel | undefined> {
+export async function createConnection(): Promise<Channel> {
     try {
         const connection: Connection = await client.connect(
             `${RABBITMQ_ENDPOINT}`
@@ -12,7 +12,7 @@ export async function createConnection(): Promise<Channel | undefined> {
         return channel;
     } catch (error) {
         console.log(error);
-        return undefined;
+        process.exit(1);
     }
 }
 
