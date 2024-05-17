@@ -8,7 +8,13 @@ import {
     IAuthPayload,
     IErrorResponse
 } from "@Akihira77/jobber-shared";
-import { API_GATEWAY_URL, JWT_TOKEN, NODE_ENV, PORT } from "@review/config";
+import {
+    API_GATEWAY_URL,
+    JWT_TOKEN,
+    logger,
+    NODE_ENV,
+    PORT
+} from "@review/config";
 import {
     Application,
     NextFunction,
@@ -20,11 +26,12 @@ import {
 import hpp from "hpp";
 import helmet from "helmet";
 import cors from "cors";
-// import { checkConnection } from "@review/elasticsearch";
 import { appRoutes } from "@review/routes";
 import { createConnection } from "@review/queues/connection";
 import { Channel } from "amqplib";
 import { StatusCodes } from "http-status-codes";
+
+import { checkConnection } from "./elasticsearch";
 
 export let reviewChannel: Channel;
 
@@ -33,7 +40,7 @@ export function start(app: Application): void {
     standardMiddleware(app);
     routesMiddleware(app);
     startQueues();
-    // startElasticSearch();
+    startElasticSearch();
     reviewErrorHandler(app);
     startServer(app);
 }
@@ -76,9 +83,9 @@ async function startQueues(): Promise<void> {
     reviewChannel = (await createConnection()) as Channel;
 }
 
-// function startElasticSearch(): void {
-//     checkConnection();
-// }
+function startElasticSearch(): void {
+    checkConnection();
+}
 
 function reviewErrorHandler(app: Application): void {
     app.use(
@@ -102,13 +109,19 @@ function reviewErrorHandler(app: Application): void {
 async function startServer(app: Application): Promise<void> {
     try {
         const httpServer: http.Server = new http.Server(app);
+        logger("server.ts - startServer()").info(
+            `ReviewService has started with pid: ${process.pid}`
+        );
 
         if (NODE_ENV !== "test") {
             httpServer.listen(Number(PORT), () => {
-                console.log(`Review server running on port ${PORT}`);
+                logger("server.ts - startServer()").info(
+                    `ReviewService running on port ${PORT}`
+                );
+                // console.log(`Review server running on port ${PORT}`);
             });
         }
     } catch (error) {
-        console.log(error);
+        logger("server.ts - startServer()").error(error);
     }
 }

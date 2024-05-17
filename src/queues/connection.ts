@@ -1,4 +1,4 @@
-import { RABBITMQ_ENDPOINT } from "@review/config";
+import { logger, RABBITMQ_ENDPOINT } from "@review/config";
 import client, { Connection, Channel } from "amqplib";
 
 export async function createConnection(): Promise<Channel> {
@@ -9,9 +9,13 @@ export async function createConnection(): Promise<Channel> {
         const channel: Channel = await connection.createChannel();
         closeConnection(channel, connection);
 
+        logger("queues/connection.ts - createConnection()").info(
+            "ReviewService connected to RabbitMQ successfully..."
+        );
+
         return channel;
     } catch (error) {
-        console.log(error);
+        logger("queues/connection.ts - createConnection()").error(error);
         process.exit(1);
     }
 }

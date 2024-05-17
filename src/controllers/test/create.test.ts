@@ -14,7 +14,7 @@ describe("Review Controller - Create method", () => {
 
         expect(body).toEqual({
             comingFrom: "addReview() method",
-            message: `"gigId" is required`,
+            message: "\"gigId\" is required",
             status: "error",
             statusCode: 400
         });

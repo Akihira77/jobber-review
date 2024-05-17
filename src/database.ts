@@ -1,7 +1,7 @@
-import { POSTGRES_DB } from "@review/config";
+import { logger, POSTGRES_DB } from "@review/config";
 import { Pool } from "pg";
 
-export let pool: Pool = new Pool({
+export const pool: Pool = new Pool({
     connectionString: `${POSTGRES_DB}`
 });
 
@@ -35,8 +35,12 @@ const createTableText = `
 export async function databaseConnection(): Promise<void> {
     try {
         await pool.connect();
+        // console.log("PostgreSQL DB is connected");
+        logger("database.ts - databaseConnection()").info(
+            "ReviewService PostgreSQL DB is connected"
+        );
         await pool.query(createTableText);
     } catch (error) {
-        console.log(error);
+        logger("database.ts - databaseConnection()").error(error);
     }
 }

@@ -105,7 +105,7 @@ export async function getReviewsBySellerId(
 export async function deleteReview(reviewId: number): Promise<boolean> {
     try {
         const { rowCount } = await pool.query(
-            `DELETE FROM "reviews" WHERE id = $1`,
+            "DELETE FROM \"reviews\" WHERE id = $1",
             [reviewId]
         );
 

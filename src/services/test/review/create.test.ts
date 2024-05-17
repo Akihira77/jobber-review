@@ -32,6 +32,8 @@ describe("Create method", () => {
     });
 
     it("Failed case - all empty", async () => {
-        await expect(addReview({} as IReviewDocument)).rejects.toThrow(`"gigId" is required`);
+        await expect(addReview({} as IReviewDocument)).rejects.toThrow(
+            "\"gigId\" is required"
+        );
     });
 });

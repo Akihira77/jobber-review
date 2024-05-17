@@ -1,4 +1,7 @@
-import { BadRequestError, IReviewMessageDetails } from "@Akihira77/jobber-shared";
+import {
+    BadRequestError,
+    IReviewMessageDetails
+} from "@Akihira77/jobber-shared";
 import { exchangeNamesAndRoutingKeys } from "@review/config";
 import { publishFanoutMessage } from "@review/queues/review.producer";
 import { reviewSchema } from "@review/schemas/review.schema";
@@ -10,7 +13,10 @@ import { StatusCodes } from "http-status-codes";
 export async function addReview(req: Request, res: Response): Promise<void> {
     const { error } = reviewSchema.validate(req.body);
     if (error?.details[0]) {
-        throw new BadRequestError(error.details[0].message, "ReviewService Create review() method")
+        throw new BadRequestError(
+            error.details[0].message,
+            "ReviewService Create review() method"
+        );
     }
 
     const review = await reviewService.addReview(req.body);
@@ -58,7 +64,9 @@ export async function findReviewsBySellerId(
     req: Request,
     res: Response
 ): Promise<void> {
-    const reviews = await reviewService.getReviewsBySellerId(req.params.sellerId);
+    const reviews = await reviewService.getReviewsBySellerId(
+        req.params.sellerId
+    );
 
     res.status(StatusCodes.OK).json({
         message: "Gig reviews by seller id",

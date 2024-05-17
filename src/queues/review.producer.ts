@@ -1,5 +1,6 @@
 import { Channel } from "amqplib";
 import { createConnection } from "@review/queues/connection";
+import { logger } from "@review/config";
 
 export async function publishFanoutMessage(
     channel: Channel,
@@ -15,8 +16,12 @@ export async function publishFanoutMessage(
         await channel.assertExchange(exchangeName, "fanout");
 
         channel.publish(exchangeName, "", Buffer.from(message));
-        console.log(logMessage);
+        logger("queues/review.producer.ts - publishFanoutMessage()").info(
+            logMessage
+        );
     } catch (error) {
-        console.log(error);
+        logger("queues/review.producer.ts - publishFanoutMessage()").error(
+            error
+        );
     }
 }
