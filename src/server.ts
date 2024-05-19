@@ -32,6 +32,7 @@ import { Channel } from "amqplib";
 import { StatusCodes } from "http-status-codes";
 
 import { checkConnection } from "./elasticsearch";
+import morgan from "morgan";
 
 export let reviewChannel: Channel;
 
@@ -73,6 +74,7 @@ function standardMiddleware(app: Application): void {
     app.use(compression());
     app.use(json({ limit: "200mb" }));
     app.use(urlencoded({ extended: true, limit: "200mb" }));
+    app.use(morgan("dev"));
 }
 
 function routesMiddleware(app: Application): void {
