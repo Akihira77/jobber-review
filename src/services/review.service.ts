@@ -1,32 +1,10 @@
-import {
-    BadRequestError,
-    IReviewDocument,
-    winstonLogger
-} from "@Akihira77/jobber-shared";
-import { ELASTIC_SEARCH_URL } from "@review/config";
+import { CustomError, IReviewDocument } from "@Akihira77/jobber-shared";
 import { pool } from "@review/database";
-import { reviewSchema } from "@review/schemas/review.schema";
-import { Logger } from "winston";
-
-const logger: Logger = winstonLogger(
-    `${ELASTIC_SEARCH_URL}`,
-    "reviewService",
-    "debug"
-);
 
 export async function addReview(
     data: IReviewDocument
 ): Promise<IReviewDocument> {
     try {
-        const { error } = reviewSchema.validate(data);
-
-        if (error?.details) {
-            throw new BadRequestError(
-                error.details[0].message,
-                "addReview() method"
-            );
-        }
-
         const {
             gigId,
             rating,
@@ -80,8 +58,8 @@ export async function addReview(
 
         return rows[0];
     } catch (error) {
-        if (error) {
-            logger?.error(`ReviewService addReview() method error:`, error);
+        console.log(error);
+        if (error instanceof CustomError) {
             throw error;
         }
 
@@ -101,14 +79,7 @@ export async function getReviewsByGigId(
 
         return rows;
     } catch (error) {
-        if (error) {
-            logger?.error(
-                `ReviewService getReviewsByGigId() method error:`,
-                error
-            );
-            throw error;
-        }
-
+        console.log(error);
         throw new Error("Unexpected Error Occured. Please Try Again");
     }
 }
@@ -126,14 +97,7 @@ export async function getReviewsBySellerId(
 
         return rows;
     } catch (error) {
-        if (error) {
-            logger?.error(
-                `ReviewService getReviewsBySellerId() method error:`,
-                error
-            );
-            throw error;
-        }
-
+        console.log(error);
         throw new Error("Unexpected Error Occured. Please Try Again");
     }
 }
@@ -141,17 +105,13 @@ export async function getReviewsBySellerId(
 export async function deleteReview(reviewId: number): Promise<boolean> {
     try {
         const { rowCount } = await pool.query(
-            `DELETE FROM "reviews" WHERE id = $1`,
+            "DELETE FROM \"reviews\" WHERE id = $1",
             [reviewId]
         );
 
         return rowCount ? rowCount > 0 : false;
     } catch (error) {
-        if (error) {
-            logger?.error(`ReviewService deleteReview() method error:`, error);
-            throw error;
-        }
-
+        console.log(error);
         throw new Error("Unexpected Error Occured. Please Try Again");
     }
 }

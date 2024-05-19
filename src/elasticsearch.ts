@@ -1,14 +1,6 @@
 import { Client } from "@elastic/elasticsearch";
-import { Logger } from "winston";
-import { winstonLogger } from "@Akihira77/jobber-shared";
 import { ClusterHealthResponse } from "@elastic/elasticsearch/lib/api/types";
-import { ELASTIC_SEARCH_URL } from "@review/config";
-
-const log: Logger = winstonLogger(
-    `${ELASTIC_SEARCH_URL}`,
-    "reviewElasticSearchServer",
-    "debug"
-);
+import { ELASTIC_SEARCH_URL, logger } from "@review/config";
 
 export const elasticSearchClient = new Client({
     node: ELASTIC_SEARCH_URL
@@ -17,19 +9,26 @@ export const elasticSearchClient = new Client({
 export async function checkConnection(): Promise<void> {
     let isConnected = false;
     while (!isConnected) {
-        log.info("ReviewService connecting to Elasticsearch...");
+        logger("elasticsearch.ts - checkConnection()").info(
+            "ReviewService connecting to Elasticsearch..."
+        );
         try {
             const health: ClusterHealthResponse =
                 await elasticSearchClient.cluster.health({});
 
-            log.info(
+            logger("elasticsearch.ts - checkConnection()").info(
                 `ReviewService Elasticsearch health status - ${health.status}`
             );
 
             isConnected = true;
         } catch (error) {
-            log.error("Connection to Elasticsearch failed. Retrying...");
-            log.error("ReviewService checkConnection() method error:", error);
+            logger("elasticsearch.ts - checkConnection()").error(
+                "Connection to Elasticsearch failed. Retrying..."
+            );
+            logger("elasticsearch.ts - checkConnection()").error(
+                "ReviewService checkConnection() method error:",
+                error
+            );
         }
     }
 }

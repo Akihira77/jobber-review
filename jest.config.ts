@@ -25,7 +25,8 @@ const config: Config.InitialOptions = {
     coverageReporters: ["text-summary", "lcov"],
     moduleNameMapper: {
         "@review/(.*)": ["<rootDir>/src/$1"]
-    }
+    },
+    testTimeout: 20000
 };
 
 export default config;

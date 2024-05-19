@@ -1,27 +1,22 @@
-import { winstonLogger } from "@Akihira77/jobber-shared";
-import { ELASTIC_SEARCH_URL, RABBITMQ_ENDPOINT } from "@review/config";
+import { logger, RABBITMQ_ENDPOINT } from "@review/config";
 import client, { Connection, Channel } from "amqplib";
-import { Logger } from "winston";
 
-const log: Logger = winstonLogger(
-    `${ELASTIC_SEARCH_URL}`,
-    "reviewQueueConnection",
-    "debug"
-);
-
-export async function createConnection(): Promise<Channel | undefined> {
+export async function createConnection(): Promise<Channel> {
     try {
         const connection: Connection = await client.connect(
             `${RABBITMQ_ENDPOINT}`
         );
         const channel: Channel = await connection.createChannel();
-        log.info("Review server connected to queue successfully...");
         closeConnection(channel, connection);
+
+        logger("queues/connection.ts - createConnection()").info(
+            "ReviewService connected to RabbitMQ successfully..."
+        );
 
         return channel;
     } catch (error) {
-        log.error("ReviewService createConnection() method error:", error);
-        return undefined;
+        logger("queues/connection.ts - createConnection()").error(error);
+        process.exit(1);
     }
 }
 

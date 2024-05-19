@@ -1,14 +1,6 @@
-import { winstonLogger } from "@Akihira77/jobber-shared";
-import { ELASTIC_SEARCH_URL } from "@review/config";
 import { Channel } from "amqplib";
-import { Logger } from "winston";
 import { createConnection } from "@review/queues/connection";
-
-const log: Logger = winstonLogger(
-    `${ELASTIC_SEARCH_URL}`,
-    "reviewServiceProducer",
-    "debug"
-);
+import { logger } from "@review/config";
 
 export async function publishFanoutMessage(
     channel: Channel,
@@ -18,17 +10,17 @@ export async function publishFanoutMessage(
 ): Promise<void> {
     try {
         if (!channel) {
-            channel = (await createConnection()) as Channel;
+            channel = await createConnection();
         }
 
         await channel.assertExchange(exchangeName, "fanout");
 
         channel.publish(exchangeName, "", Buffer.from(message));
-
-        log.info(logMessage);
+        logger("queues/review.producer.ts - publishFanoutMessage()").info(
+            logMessage
+        );
     } catch (error) {
-        log.error(
-            "ReviewService QueueProducer publishFanoutMessage() method error:",
+        logger("queues/review.producer.ts - publishFanoutMessage()").error(
             error
         );
     }

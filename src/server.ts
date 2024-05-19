@@ -6,14 +6,12 @@ import jwt from "jsonwebtoken";
 import {
     CustomError,
     IAuthPayload,
-    IErrorResponse,
-    winstonLogger
+    IErrorResponse
 } from "@Akihira77/jobber-shared";
-import { Logger } from "winston";
 import {
     API_GATEWAY_URL,
-    ELASTIC_SEARCH_URL,
     JWT_TOKEN,
+    logger,
     NODE_ENV,
     PORT
 } from "@review/config";
@@ -28,17 +26,14 @@ import {
 import hpp from "hpp";
 import helmet from "helmet";
 import cors from "cors";
-import { checkConnection } from "@review/elasticsearch";
 import { appRoutes } from "@review/routes";
 import { createConnection } from "@review/queues/connection";
 import { Channel } from "amqplib";
 import { StatusCodes } from "http-status-codes";
 
-const log: Logger = winstonLogger(
-    `${ELASTIC_SEARCH_URL}`,
-    "reviewServer",
-    "debug"
-);
+import { checkConnection } from "./elasticsearch";
+import morgan from "morgan";
+
 export let reviewChannel: Channel;
 
 export function start(app: Application): void {
@@ -79,6 +74,7 @@ function standardMiddleware(app: Application): void {
     app.use(compression());
     app.use(json({ limit: "200mb" }));
     app.use(urlencoded({ extended: true, limit: "200mb" }));
+    app.use(morgan("dev"));
 }
 
 function routesMiddleware(app: Application): void {
@@ -101,15 +97,10 @@ function reviewErrorHandler(app: Application): void {
             res: Response,
             next: NextFunction
         ) => {
-            log.error(`ReviewService ${error.comingFrom}:`, error);
-
             if (error instanceof CustomError) {
                 res.status(
                     error.statusCode ?? StatusCodes.INTERNAL_SERVER_ERROR
-                ).json(
-                    error?.serializeErrors() ??
-                        "Unexpected Error Occured. Please Try Again"
-                );
+                ).json(error.serializeErrors());
             }
 
             next();
@@ -120,15 +111,19 @@ function reviewErrorHandler(app: Application): void {
 async function startServer(app: Application): Promise<void> {
     try {
         const httpServer: http.Server = new http.Server(app);
-
-        log.info(`Review server has started with pid ${process.pid}`);
+        logger("server.ts - startServer()").info(
+            `ReviewService has started with pid: ${process.pid}`
+        );
 
         if (NODE_ENV !== "test") {
             httpServer.listen(Number(PORT), () => {
-                log.info(`Review server running on port ${PORT}`);
+                logger("server.ts - startServer()").info(
+                    `ReviewService running on port ${PORT}`
+                );
+                // console.log(`Review server running on port ${PORT}`);
             });
         }
     } catch (error) {
-        log.error("ReviewService startServer() method error:", error);
+        logger("server.ts - startServer()").error(error);
     }
 }
