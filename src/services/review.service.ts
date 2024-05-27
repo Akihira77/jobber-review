@@ -1,27 +1,32 @@
 import { CustomError, IReviewDocument } from "@Akihira77/jobber-shared";
-import { pool } from "@review/database";
+import { PoolClient } from "pg";
+import { Logger } from "winston";
 
-export async function addReview(
-    data: IReviewDocument
-): Promise<IReviewDocument> {
-    try {
-        const {
-            gigId,
-            rating,
-            orderId,
-            country,
-            review,
-            reviewerId,
-            reviewerImage,
-            reviewerUsername,
-            sellerId,
-            reviewType
-        } = data;
+export class ReviewService {
+    constructor(
+        private db: PoolClient,
+        private logger: (moduleName: string) => Logger
+    ) {}
 
-        const createdAtDate = new Date().toISOString();
+    async addReview(data: IReviewDocument): Promise<IReviewDocument> {
+        try {
+            const {
+                gigId,
+                rating,
+                orderId,
+                country,
+                review,
+                reviewerId,
+                reviewerImage,
+                reviewerUsername,
+                sellerId,
+                reviewType
+            } = data;
 
-        const { rows } = await pool.query<IReviewDocument>(
-            `
+            const createdAtDate = new Date().toISOString();
+
+            const { rows } = await this.db.query<IReviewDocument>(
+                `
         INSERT INTO "reviews" (
             "gigId", "rating", "orderId", "country", "createdAt", "review", "reviewerId", "reviewerImage", "reviewerUsername", "sellerId", "reviewType"
         )
@@ -41,77 +46,82 @@ export async function addReview(
 
         RETURNING *;
     `,
-            [
-                gigId,
-                rating,
-                orderId,
-                country,
-                createdAtDate,
-                review,
-                reviewerId,
-                reviewerImage,
-                reviewerUsername,
-                sellerId,
-                reviewType
-            ]
-        );
+                [
+                    gigId,
+                    rating,
+                    orderId,
+                    country,
+                    createdAtDate,
+                    review,
+                    reviewerId,
+                    reviewerImage,
+                    reviewerUsername,
+                    sellerId,
+                    reviewType
+                ]
+            );
 
-        return rows[0];
-    } catch (error) {
-        console.log(error);
-        if (error instanceof CustomError) {
-            throw error;
+            return rows[0];
+        } catch (error) {
+            if (error instanceof CustomError) {
+                this.logger("services/review.service.ts - addReview()").error(
+                    error
+                );
+                throw error;
+            }
+
+            throw new Error("Unexpected Error Occured. Please Try Again");
         }
-
-        throw new Error("Unexpected Error Occured. Please Try Again");
     }
-}
 
-export async function getReviewsByGigId(
-    id: string
-): Promise<IReviewDocument[]> {
-    try {
-        const { rows } = await pool.query<IReviewDocument>(
-            `SELECT * FROM "reviews"
+    async getReviewsByGigId(id: string): Promise<IReviewDocument[]> {
+        try {
+            const { rows } = await this.db.query<IReviewDocument>(
+                `SELECT * FROM "reviews"
         WHERE "gigId" = $1`,
-            [id]
-        );
+                [id]
+            );
 
-        return rows;
-    } catch (error) {
-        console.log(error);
-        throw new Error("Unexpected Error Occured. Please Try Again");
+            return rows;
+        } catch (error) {
+            this.logger(
+                "services/review.service.ts - getReviewsByGigId()"
+            ).error(error);
+            throw new Error("Unexpected Error Occured. Please Try Again");
+        }
     }
-}
 
-export async function getReviewsBySellerId(
-    id: string
-): Promise<IReviewDocument[]> {
-    try {
-        const { rows } = await pool.query<IReviewDocument>(
-            `SELECT * FROM "reviews"
+    async getReviewsBySellerId(id: string): Promise<IReviewDocument[]> {
+        try {
+            const { rows } = await this.db.query<IReviewDocument>(
+                `SELECT this.db FROM "reviews"
         WHERE "sellerId" = $1
         AND "reviewType" = $2`,
-            [id, "seller-review"]
-        );
+                [id, "seller-review"]
+            );
 
-        return rows;
-    } catch (error) {
-        console.log(error);
-        throw new Error("Unexpected Error Occured. Please Try Again");
+            return rows;
+        } catch (error) {
+            this.logger(
+                "services/review.service.ts - getReviewsBySellerId()"
+            ).error(error);
+            throw new Error("Unexpected Error Occured. Please Try Again");
+        }
     }
-}
 
-export async function deleteReview(reviewId: number): Promise<boolean> {
-    try {
-        const { rowCount } = await pool.query(
-            "DELETE FROM \"reviews\" WHERE id = $1",
-            [reviewId]
-        );
+    async deleteReview(reviewId: number): Promise<boolean> {
+        try {
+            const { rowCount } = await this.db.query(
+                "DELETE FROM \"reviews\" WHERE id = $1",
+                [reviewId]
+            );
 
-        return rowCount ? rowCount > 0 : false;
-    } catch (error) {
-        console.log(error);
-        throw new Error("Unexpected Error Occured. Please Try Again");
+            return rowCount ? rowCount > 0 : false;
+        } catch (error) {
+            this.logger("services/review.service.ts - deleteReview()").error(
+                error
+            );
+            throw new Error("Unexpected Error Occured. Please Try Again");
+        }
     }
 }

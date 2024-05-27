@@ -8,13 +8,7 @@ import {
     IAuthPayload,
     IErrorResponse
 } from "@Akihira77/jobber-shared";
-import {
-    API_GATEWAY_URL,
-    JWT_TOKEN,
-    logger,
-    NODE_ENV,
-    PORT
-} from "@review/config";
+import { API_GATEWAY_URL, JWT_TOKEN, PORT } from "@review/config";
 import {
     Application,
     NextFunction,
@@ -27,23 +21,25 @@ import hpp from "hpp";
 import helmet from "helmet";
 import cors from "cors";
 import { appRoutes } from "@review/routes";
-import { createConnection } from "@review/queues/connection";
-import { Channel } from "amqplib";
 import { StatusCodes } from "http-status-codes";
+import { PoolClient } from "pg";
+import { Logger } from "winston";
 
-import { checkConnection } from "./elasticsearch";
-import morgan from "morgan";
+import { ElasticSearchClient } from "./elasticsearch";
+import { ReviewQueue } from "./queues/review.queue";
 
-export let reviewChannel: Channel;
-
-export function start(app: Application): void {
-    securityMiddleware(app);
+export async function start(
+    app: Application,
+    db: PoolClient,
+    logger: (moduleName: string) => Logger
+): Promise<void> {
+    const reviewQueue = await startQueues(logger);
+    startElasticSearch(logger);
     standardMiddleware(app);
-    routesMiddleware(app);
-    startQueues();
-    startElasticSearch();
+    securityMiddleware(app);
     reviewErrorHandler(app);
-    startServer(app);
+    routesMiddleware(app, db, reviewQueue, logger);
+    startServer(app, logger);
 }
 
 function securityMiddleware(app: Application): void {
@@ -74,19 +70,26 @@ function standardMiddleware(app: Application): void {
     app.use(compression());
     app.use(json({ limit: "200mb" }));
     app.use(urlencoded({ extended: true, limit: "200mb" }));
-    app.use(morgan("dev"));
 }
 
-function routesMiddleware(app: Application): void {
-    appRoutes(app);
+function routesMiddleware(
+    app: Application,
+    db: PoolClient,
+    queue: ReviewQueue,
+    logger: (moduleName: string) => Logger
+): void {
+    appRoutes(app, db, queue, logger);
 }
 
-async function startQueues(): Promise<void> {
-    reviewChannel = (await createConnection()) as Channel;
+async function startQueues(
+    logger: (moduleName: string) => Logger
+): Promise<ReviewQueue> {
+    return new ReviewQueue(null, logger);
 }
 
-function startElasticSearch(): void {
-    checkConnection();
+function startElasticSearch(logger: (moduleName: string) => Logger): void {
+    const elasticClient = new ElasticSearchClient(logger);
+    elasticClient.checkConnection();
 }
 
 function reviewErrorHandler(app: Application): void {
@@ -108,22 +111,25 @@ function reviewErrorHandler(app: Application): void {
     );
 }
 
-async function startServer(app: Application): Promise<void> {
+async function startServer(
+    app: Application,
+    logger: (moduleName: string) => Logger
+): Promise<void> {
     try {
         const httpServer: http.Server = new http.Server(app);
         logger("server.ts - startServer()").info(
             `ReviewService has started with pid: ${process.pid}`
         );
 
-        if (NODE_ENV !== "test") {
-            httpServer.listen(Number(PORT), () => {
-                logger("server.ts - startServer()").info(
-                    `ReviewService running on port ${PORT}`
-                );
-                // console.log(`Review server running on port ${PORT}`);
-            });
-        }
+        httpServer.listen(Number(PORT), () => {
+            logger("server.ts - startServer()").info(
+                `ReviewService running on port ${PORT}`
+            );
+        });
     } catch (error) {
-        logger("server.ts - startServer()").error(error);
+        logger("server.ts - startServer()").error(
+            "ReviewService startServer() method error:",
+            error
+        );
     }
 }
