@@ -84,7 +84,9 @@ function routesMiddleware(
 async function startQueues(
     logger: (moduleName: string) => Logger
 ): Promise<ReviewQueue> {
-    return new ReviewQueue(null, logger);
+    const reviewQueue = new ReviewQueue(null, logger);
+    await reviewQueue.createConnection();
+    return reviewQueue;
 }
 
 function startElasticSearch(logger: (moduleName: string) => Logger): void {
