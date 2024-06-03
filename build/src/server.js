@@ -27,14 +27,14 @@ const routes_1 = require("./routes");
 const http_status_codes_1 = require("http-status-codes");
 const elasticsearch_1 = require("./elasticsearch");
 const review_queue_1 = require("./queues/review.queue");
-function start(app, db, logger) {
+function start(app, pool, logger) {
     return __awaiter(this, void 0, void 0, function* () {
-        standardMiddleware(app);
-        securityMiddleware(app);
         const reviewQueue = yield startQueues(logger);
         startElasticSearch(logger);
+        standardMiddleware(app);
+        securityMiddleware(app);
         reviewErrorHandler(app);
-        routesMiddleware(app, db, reviewQueue, logger);
+        routesMiddleware(app, pool, reviewQueue, logger);
         startServer(app, logger);
     });
 }
@@ -63,12 +63,14 @@ function standardMiddleware(app) {
     app.use((0, express_1.json)({ limit: "200mb" }));
     app.use((0, express_1.urlencoded)({ extended: true, limit: "200mb" }));
 }
-function routesMiddleware(app, db, queue, logger) {
-    (0, routes_1.appRoutes)(app, db, queue, logger);
+function routesMiddleware(app, pool, queue, logger) {
+    (0, routes_1.appRoutes)(app, pool, queue, logger);
 }
 function startQueues(logger) {
     return __awaiter(this, void 0, void 0, function* () {
-        return new review_queue_1.ReviewQueue(null, logger);
+        const reviewQueue = new review_queue_1.ReviewQueue(null, logger);
+        yield reviewQueue.createConnection();
+        return reviewQueue;
     });
 }
 function startElasticSearch(logger) {

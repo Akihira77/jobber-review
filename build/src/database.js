@@ -35,23 +35,20 @@ const createTableText = `
 `;
 function databaseConnection(logger) {
     return __awaiter(this, void 0, void 0, function* () {
-        const pool = new pg_1.Pool({
-            host: "localhost",
-            user: "jobber",
-            connectionString: `${config_1.POSTGRES_DB}`,
-            max: 50,
-            idleTimeoutMillis: 10000 // 10 seconds
-        });
         try {
-            const client = yield pool.connect();
-            // console.log("PostgreSQL DB is connected");
-            logger("database.ts - databaseConnection()").info("ReviewService PostgreSQL DB is connected");
-            yield client.query(createTableText);
-            return client;
+            const pool = new pg_1.Pool({
+                host: "localhost",
+                user: "jobber",
+                connectionString: `${config_1.POSTGRES_DB}`,
+                max: 50,
+                idleTimeoutMillis: 10000 // 10 seconds
+            });
+            yield pool.query(createTableText);
+            // await pool.end();
+            return pool;
         }
         catch (error) {
             logger("database.ts - databaseConnection()").error("ReviewService PostgreSQL connection error.", error);
-            yield pool.end();
             process.exit(1);
         }
     });

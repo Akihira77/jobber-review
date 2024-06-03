@@ -1,5 +1,5 @@
 import { POSTGRES_DB } from "@review/config";
-import { Pool, PoolClient } from "pg";
+import { Pool } from "pg";
 import { Logger } from "winston";
 
 const createTableText = `
@@ -26,28 +26,26 @@ const createTableText = `
 
 export async function databaseConnection(
     logger: (moduleName: string) => Logger
-): Promise<PoolClient> {
-    const pool: Pool = new Pool({
-        host: "localhost",
-        user: "jobber",
-        connectionString: `${POSTGRES_DB}`,
-        max: 50,
-        idleTimeoutMillis: 10_000 // 10 seconds
-    });
+): Promise<Pool> {
     try {
-        const client = await pool.connect();
-        // console.log("PostgreSQL DB is connected");
-        logger("database.ts - databaseConnection()").info(
-            "ReviewService PostgreSQL DB is connected"
-        );
-        await client.query(createTableText);
-        return client;
+        const pool: Pool = new Pool({
+            host: "localhost",
+            user: "jobber",
+            connectionString: `${POSTGRES_DB}`,
+            max: 50,
+            idleTimeoutMillis: 10_000 // 10 seconds
+        });
+
+        await pool.query(createTableText);
+
+        // await pool.end();
+        return pool;
     } catch (error) {
         logger("database.ts - databaseConnection()").error(
             "ReviewService PostgreSQL connection error.",
             error
         );
-        await pool.end();
+
         process.exit(1);
     }
 }

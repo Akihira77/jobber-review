@@ -7,8 +7,8 @@ const review_route_1 = require("./routes/review.route");
 const review_controller_1 = require("./controllers/review.controller");
 const review_service_1 = require("./services/review.service");
 const BASE_PATH = "/api/v1/review";
-function appRoutes(app, db, queue, logger) {
-    const reviewService = new review_service_1.ReviewService(db, logger);
+function appRoutes(app, pool, queue, logger) {
+    const reviewService = new review_service_1.ReviewService(pool, logger);
     const reviewController = new review_controller_1.ReviewController(reviewService, queue);
     app.use("", (0, health_route_1.healthRoutes)());
     // app.use(BASE_PATH, verifyGatewayRequest, reviewRoutes(reviewController));

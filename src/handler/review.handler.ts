@@ -1,22 +1,21 @@
 import {
     BadRequestError,
+    IReviewDocument,
     IReviewMessageDetails
 } from "@Akihira77/jobber-shared";
 import { exchangeNamesAndRoutingKeys } from "@review/config";
 import { ReviewQueue } from "@review/queues/review.queue";
 import { reviewSchema } from "@review/schemas/review.schema";
 import { ReviewService } from "@review/services/review.service";
-import { Request, Response } from "express";
-import { StatusCodes } from "http-status-codes";
 
-export class ReviewController {
+export class ReviewHandler {
     constructor(
         private reviewService: ReviewService,
         private rmq: ReviewQueue
     ) {}
 
-    async addReview(req: Request, res: Response): Promise<void> {
-        const { error } = reviewSchema.validate(req.body);
+    async addReview(reqBody: any): Promise<IReviewDocument> {
+        const { error, value } = reviewSchema.validate(reqBody);
         if (error?.details[0]) {
             throw new BadRequestError(
                 error.details[0].message,
@@ -24,7 +23,7 @@ export class ReviewController {
             );
         }
 
-        const review = await this.reviewService.addReview(req.body);
+        const review = await this.reviewService.addReview(value);
 
         const messageDetails: IReviewMessageDetails = {
             gigId: review.gigId,
@@ -46,31 +45,18 @@ export class ReviewController {
             "Review details sent to order and users services"
         );
 
-        res.status(StatusCodes.CREATED).json({
-            message: "Review created successfully",
-            review
-        });
+        return review;
     }
 
-    async findReviewsByGigId(req: Request, res: Response): Promise<void> {
-        const reviews = await this.reviewService.getReviewsByGigId(
-            req.params.gigId
-        );
+    async findReviewsByGigId(gigId: string): Promise<IReviewDocument[]> {
+        const reviews = await this.reviewService.getReviewsByGigId(gigId);
 
-        res.status(StatusCodes.OK).json({
-            message: "Gig reviews by gig id",
-            reviews
-        });
+        return reviews;
     }
 
-    async findReviewsBySellerId(req: Request, res: Response): Promise<void> {
-        const reviews = await this.reviewService.getReviewsBySellerId(
-            req.params.sellerId
-        );
+    async findReviewsBySellerId(sellerId: string): Promise<IReviewDocument[]> {
+        const reviews = await this.reviewService.getReviewsBySellerId(sellerId);
 
-        res.status(StatusCodes.OK).json({
-            message: "Gig reviews by seller id",
-            reviews
-        });
+        return reviews;
     }
 }

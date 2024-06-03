@@ -1,15 +1,29 @@
-import { CustomError, IReviewDocument } from "@Akihira77/jobber-shared";
-import { PoolClient } from "pg";
+import {
+    BadRequestError,
+    CustomError,
+    IReviewDocument
+} from "@Akihira77/jobber-shared";
+import { reviewSchema } from "@review/schemas/review.schema";
+import { Pool } from "pg";
 import { Logger } from "winston";
 
 export class ReviewService {
     constructor(
-        private db: PoolClient,
+        private dbPool: Pool,
         private logger: (moduleName: string) => Logger
     ) {}
 
-    async addReview(data: IReviewDocument): Promise<IReviewDocument> {
+    async addReview(
+        data: Omit<IReviewDocument, "createdAt">
+    ): Promise<IReviewDocument> {
         try {
+            const { error } = reviewSchema.validate(data);
+            if (error?.details[0]) {
+                throw new BadRequestError(
+                    error.details[0].message,
+                    "ReviewService addReview() method"
+                );
+            }
             const {
                 gigId,
                 rating,
@@ -25,7 +39,7 @@ export class ReviewService {
 
             const createdAtDate = new Date().toISOString();
 
-            const { rows } = await this.db.query<IReviewDocument>(
+            const { rows } = await this.dbPool.query<IReviewDocument>(
                 `
         INSERT INTO "reviews" (
             "gigId", "rating", "orderId", "country", "createdAt", "review", "reviewerId", "reviewerImage", "reviewerUsername", "sellerId", "reviewType"
@@ -63,10 +77,10 @@ export class ReviewService {
 
             return rows[0];
         } catch (error) {
+            this.logger("services/review.service.ts - addReview()").error(
+                error
+            );
             if (error instanceof CustomError) {
-                this.logger("services/review.service.ts - addReview()").error(
-                    error
-                );
                 throw error;
             }
 
@@ -76,7 +90,7 @@ export class ReviewService {
 
     async getReviewsByGigId(id: string): Promise<IReviewDocument[]> {
         try {
-            const { rows } = await this.db.query<IReviewDocument>(
+            const { rows } = await this.dbPool.query<IReviewDocument>(
                 `SELECT * FROM "reviews"
         WHERE "gigId" = $1`,
                 [id]
@@ -93,7 +107,7 @@ export class ReviewService {
 
     async getReviewsBySellerId(id: string): Promise<IReviewDocument[]> {
         try {
-            const { rows } = await this.db.query<IReviewDocument>(
+            const { rows } = await this.dbPool.query<IReviewDocument>(
                 `SELECT this.db FROM "reviews"
         WHERE "sellerId" = $1
         AND "reviewType" = $2`,
@@ -111,8 +125,8 @@ export class ReviewService {
 
     async deleteReview(reviewId: number): Promise<boolean> {
         try {
-            const { rowCount } = await this.db.query(
-                "DELETE FROM \"reviews\" WHERE id = $1",
+            const { rowCount } = await this.dbPool.query(
+                'DELETE FROM "reviews" WHERE id = $1',
                 [reviewId]
             );
 

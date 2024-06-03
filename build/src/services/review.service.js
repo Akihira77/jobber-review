@@ -11,17 +11,22 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.ReviewService = void 0;
 const jobber_shared_1 = require("@Akihira77/jobber-shared");
+const review_schema_1 = require("../schemas/review.schema");
 class ReviewService {
-    constructor(db, logger) {
-        this.db = db;
+    constructor(dbPool, logger) {
+        this.dbPool = dbPool;
         this.logger = logger;
     }
     addReview(data) {
         return __awaiter(this, void 0, void 0, function* () {
             try {
-                const { gigId, rating, orderId, country, review, reviewerId, reviewerImage, reviewerUsername, sellerId, reviewType } = data;
+                const { error } = review_schema_1.reviewSchema.validate(data);
+                if (error === null || error === void 0 ? void 0 : error.details[0]) {
+                    throw new jobber_shared_1.BadRequestError(error.details[0].message, "ReviewService addReview() method");
+                }
+                const { gigId, rating, orderId, country, review, reviewerId, reviewerImage, reviewerUsername, sellerId, reviewType, } = data;
                 const createdAtDate = new Date().toISOString();
-                const { rows } = yield this.db.query(`
+                const { rows } = yield this.dbPool.query(`
         INSERT INTO "reviews" (
             "gigId", "rating", "orderId", "country", "createdAt", "review", "reviewerId", "reviewerImage", "reviewerUsername", "sellerId", "reviewType"
         )
@@ -56,8 +61,8 @@ class ReviewService {
                 return rows[0];
             }
             catch (error) {
+                this.logger("services/review.service.ts - addReview()").error(error);
                 if (error instanceof jobber_shared_1.CustomError) {
-                    this.logger("services/review.service.ts - addReview()").error(error);
                     throw error;
                 }
                 throw new Error("Unexpected Error Occured. Please Try Again");
@@ -67,7 +72,7 @@ class ReviewService {
     getReviewsByGigId(id) {
         return __awaiter(this, void 0, void 0, function* () {
             try {
-                const { rows } = yield this.db.query(`SELECT * FROM "reviews"
+                const { rows } = yield this.dbPool.query(`SELECT * FROM "reviews"
         WHERE "gigId" = $1`, [id]);
                 return rows;
             }
@@ -80,7 +85,7 @@ class ReviewService {
     getReviewsBySellerId(id) {
         return __awaiter(this, void 0, void 0, function* () {
             try {
-                const { rows } = yield this.db.query(`SELECT this.db FROM "reviews"
+                const { rows } = yield this.dbPool.query(`SELECT this.db FROM "reviews"
         WHERE "sellerId" = $1
         AND "reviewType" = $2`, [id, "seller-review"]);
                 return rows;
@@ -94,7 +99,7 @@ class ReviewService {
     deleteReview(reviewId) {
         return __awaiter(this, void 0, void 0, function* () {
             try {
-                const { rowCount } = yield this.db.query("DELETE FROM \"reviews\" WHERE id = $1", [reviewId]);
+                const { rowCount } = yield this.dbPool.query('DELETE FROM "reviews" WHERE id = $1', [reviewId]);
                 return rowCount ? rowCount > 0 : false;
             }
             catch (error) {

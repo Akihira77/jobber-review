@@ -16,6 +16,11 @@ declare global {
             ELASTIC_APM_SERVER_URL: string;
             ELASTIC_APM_SECRET_TOKEN: string;
             ELASTIC_APM_SERVICE_NAME: string;
+            NEW_RELIC_AI_MONITORING_ENABLED: string;
+            NEW_RELIC_CUSTOM_INSIGHTS_EVENTS_MAX_SAMPLES_STORED: string;
+            NEW_RELIC_SPAN_EVENTS_MAX_SAMPLES_STORED: string;
+            NEW_RELIC_APP_NAME: string;
+            NEW_RELIC_LICENSE_KEY: string;
         }
     }
 }
