@@ -8,21 +8,17 @@ import { rateLimiter } from "hono-rate-limiter";
 import { csrf } from "hono/csrf";
 import { cors } from "hono/cors";
 import jwt from "jsonwebtoken";
-import {
-    CustomError,
-    IAuthPayload,
-    NotAuthorizedError
-} from "@Akihira77/jobber-shared";
+import { CustomError, IAuthPayload } from "@Akihira77/jobber-shared";
 import { API_GATEWAY_URL, JWT_TOKEN, PORT } from "@review/config";
 import { appRoutes } from "@review/routes";
 import { StatusCodes } from "http-status-codes";
 import { Pool } from "pg";
 import { Logger } from "winston";
+import { StatusCode } from "hono/utils/http-status";
+import { HTTPException } from "hono/http-exception";
 
 import { ElasticSearchClient } from "./elasticsearch";
 import { ReviewQueue } from "./queues/review.queue";
-import { StatusCode } from "hono/utils/http-status";
-import { HTTPException } from "hono/http-exception";
 
 const LIMIT_TIMEOUT = 2 * 1000; // 2s
 
@@ -59,23 +55,13 @@ function securityMiddleware(app: Hono): void {
     );
 
     app.use(async (c: Context, next: Next) => {
-        if (c.req.path == "/review-health") {
-            await next();
-            return;
-        }
-
         const authorization = c.req.header("authorization");
-        if (!authorization || authorization === "") {
-            throw new NotAuthorizedError(
-                "unauthenticated request",
-                "Review Service"
-            );
+        if (authorization && authorization !== "") {
+            const token = authorization.split(" ")[1];
+            const payload = jwt.verify(token, JWT_TOKEN!) as IAuthPayload;
+            c.set("currentUser", payload);
         }
 
-        const token = authorization.split(" ")[1];
-        const payload = jwt.verify(token, JWT_TOKEN!) as IAuthPayload;
-
-        c.set("currentUser", payload);
         await next();
     });
 }

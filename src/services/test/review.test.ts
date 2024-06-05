@@ -1,8 +1,9 @@
 import { IReviewDocument, winstonLogger } from "@Akihira77/jobber-shared";
 import { ELASTIC_SEARCH_URL } from "@review/config";
 import { Logger } from "winston";
-import { ReviewService } from "../review.service";
 import { databaseConnection } from "@review/database";
+
+import { ReviewService } from "../review.service";
 
 const logger = (moduleName?: string): Logger =>
     winstonLogger(
@@ -35,7 +36,7 @@ describe("review.service.ts - addReview() method", () => {
             reviewerImage: "https://picsum.photos/seed/sQFhVl2/640/480",
             country: "Andorra",
             rating: 5,
-            review: `Nice work`,
+            review: "Nice work",
             reviewType: "buyer-review"
         };
         const result = await reviewService.addReview(data);

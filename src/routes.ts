@@ -7,6 +7,7 @@ import { Context, Hono, Next } from "hono";
 import { StatusCodes } from "http-status-codes";
 import { NotAuthorizedError } from "@Akihira77/jobber-shared";
 import jwt from "jsonwebtoken";
+
 import { GATEWAY_JWT_TOKEN } from "./config";
 
 const BASE_PATH = "/api/v1/review";
@@ -76,6 +77,8 @@ export function appRoutes(
             throw error;
         }
     });
+
+    // api.use(verifyGatewayRequest);
 }
 
 async function verifyGatewayRequest(c: Context, next: Next): Promise<void> {

@@ -91,8 +91,8 @@ export class ReviewService {
     async getReviewsByGigId(id: string): Promise<IReviewDocument[]> {
         try {
             const { rows } = await this.dbPool.query<IReviewDocument>(
-                `SELECT * FROM "reviews"
-        WHERE "gigId" = $1`,
+                `SELECT "id", "gigId", "reviewerId", "orderId", "sellerId", "review", "reviewerImage", "reviewerUsername", "country", "reviewType", "rating","createdAt" FROM "reviews"
+                WHERE "gigId" = $1`,
                 [id]
             );
 
@@ -108,9 +108,9 @@ export class ReviewService {
     async getReviewsBySellerId(id: string): Promise<IReviewDocument[]> {
         try {
             const { rows } = await this.dbPool.query<IReviewDocument>(
-                `SELECT this.db FROM "reviews"
-        WHERE "sellerId" = $1
-        AND "reviewType" = $2`,
+                `SELECT "id", "gigId", "reviewerId", "orderId", "sellerId", "review", "reviewerImage", "reviewerUsername", "country", "reviewType", "rating","createdAt" FROM "reviews"
+                WHERE "sellerId" = $1
+                AND "reviewType" = $2`,
                 [id, "seller-review"]
             );
 
