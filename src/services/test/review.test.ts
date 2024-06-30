@@ -1,30 +1,30 @@
-import { IReviewDocument, winstonLogger } from "@Akihira77/jobber-shared";
-import { ELASTIC_SEARCH_URL } from "@review/config";
-import { Logger } from "winston";
-import { databaseConnection } from "@review/database";
+import { IReviewDocument, winstonLogger } from "@Akihira77/jobber-shared"
+import { ELASTIC_SEARCH_URL } from "@review/config"
+import { Logger } from "winston"
+import { databaseConnection } from "@review/database"
 
-import { ReviewService } from "../review.service";
+import { ReviewService } from "../review.service"
 
 const logger = (moduleName?: string): Logger =>
     winstonLogger(
         `${ELASTIC_SEARCH_URL}`,
         moduleName ?? "Review Service",
         "debug"
-    );
+    )
 
 describe("review.service.ts - addReview() method", () => {
-    let reviewService: ReviewService;
-    let db: any;
+    let reviewService: ReviewService
+    let db: any
     beforeAll(async () => {
-        db = await databaseConnection(logger);
-        reviewService = new ReviewService(db, logger);
-    });
+        db = await databaseConnection()
+        reviewService = new ReviewService(db, logger)
+    })
 
-    let id = 0;
+    let id = 0
     afterAll(async () => {
-        await reviewService.deleteReview(id);
-        await db.end();
-    });
+        await reviewService.deleteReview(id)
+        await db.end()
+    })
 
     it("Should successfully added review to database", async () => {
         const data: Omit<IReviewDocument, "createdAt"> = {
@@ -38,22 +38,22 @@ describe("review.service.ts - addReview() method", () => {
             rating: 5,
             review: "Nice work",
             reviewType: "buyer-review"
-        };
-        const result = await reviewService.addReview(data);
-        id = (result as any).id;
+        }
+        const result = await reviewService.addReview(data)
+        id = (result as any).id
 
-        expect(result.gigId).toBe(data.gigId);
-        expect(result.rating).toBe(data.rating);
-        expect(result.orderId).toBe(data.orderId);
-        expect(result.country).toBe(data.country);
-        expect(result.review).toBe(data.review);
-        expect(result.review).toBe(data.review);
-        expect(result.reviewerId).toBe(data.reviewerId);
-        expect(result.reviewerImage).toBe(data.reviewerImage);
-        expect(result.reviewerUsername).toBe(data.reviewerUsername);
-        expect(result.sellerId).toBe(data.sellerId);
-        expect(result.reviewType).toBe(data.reviewType);
-    });
+        expect(result.gigId).toBe(data.gigId)
+        expect(result.rating).toBe(data.rating)
+        expect(result.orderId).toBe(data.orderId)
+        expect(result.country).toBe(data.country)
+        expect(result.review).toBe(data.review)
+        expect(result.review).toBe(data.review)
+        expect(result.reviewerId).toBe(data.reviewerId)
+        expect(result.reviewerImage).toBe(data.reviewerImage)
+        expect(result.reviewerUsername).toBe(data.reviewerUsername)
+        expect(result.sellerId).toBe(data.sellerId)
+        expect(result.reviewType).toBe(data.reviewType)
+    })
 
     // it("Should throw error because not sending gigId", async () => {
     //     await expect(
@@ -166,4 +166,4 @@ describe("review.service.ts - addReview() method", () => {
     //         } as IReviewDocument)
     //     ).rejects.toThrow('"reviewType" is required');
     // });
-});
+})

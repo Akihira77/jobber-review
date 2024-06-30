@@ -1,73 +1,93 @@
-import { Context, Hono, Next } from "hono";
-import { serve } from "@hono/node-server";
-import { compress } from "hono/compress";
-import { bodyLimit } from "hono/body-limit";
-import { secureHeaders } from "hono/secure-headers";
-import { timeout } from "hono/timeout";
-import { rateLimiter } from "hono-rate-limiter";
-import { csrf } from "hono/csrf";
-import { cors } from "hono/cors";
-import jwt from "jsonwebtoken";
-import { CustomError, IAuthPayload } from "@Akihira77/jobber-shared";
-import { API_GATEWAY_URL, JWT_TOKEN, PORT } from "@review/config";
-import { appRoutes } from "@review/routes";
-import { StatusCodes } from "http-status-codes";
-import { Pool } from "pg";
-import { Logger } from "winston";
-import { StatusCode } from "hono/utils/http-status";
-import { HTTPException } from "hono/http-exception";
+import { Context, Hono, Next } from "hono"
+import { serve } from "@hono/node-server"
+import { compress } from "hono/compress"
+import { bodyLimit } from "hono/body-limit"
+import { secureHeaders } from "hono/secure-headers"
+import { timeout } from "hono/timeout"
+import { rateLimiter } from "hono-rate-limiter"
+import { cors } from "hono/cors"
+import jwt from "jsonwebtoken"
+import { csrf } from "hono/csrf"
+import {
+    CustomError,
+    IAuthPayload,
+    winstonLogger
+} from "@Akihira77/jobber-shared"
+import {
+    API_GATEWAY_URL,
+    ELASTIC_SEARCH_URL,
+    JWT_TOKEN,
+    PORT
+} from "@review/config"
+import { appRoutes } from "@review/routes"
+import { StatusCodes } from "http-status-codes"
+import { Pool } from "pg"
+import { Logger } from "winston"
+import { StatusCode } from "hono/utils/http-status"
+import { HTTPException } from "hono/http-exception"
+import { logger } from "hono/logger"
+import { ElasticSearchClient } from "./elasticsearch"
+import { ReviewQueue } from "./queues/review.queue"
 
-import { ElasticSearchClient } from "./elasticsearch";
-import { ReviewQueue } from "./queues/review.queue";
+const LIMIT_TIMEOUT = 2 * 1000 // 2s
 
-const LIMIT_TIMEOUT = 2 * 1000; // 2s
-
+export async function setupHono(app: Hono, pool: Pool): Promise<Hono> {
+    const logger = (moduleName: string) =>
+        winstonLogger(
+            `${ELASTIC_SEARCH_URL}`,
+            moduleName ?? "server.ts",
+            "debug"
+        )
+    const reviewQueue = await startQueues(logger)
+    reviewErrorHandler(app)
+    securityMiddleware(app)
+    standardMiddleware(app)
+    routesMiddleware(app, pool, reviewQueue, logger)
+    return app
+}
 export async function start(
     app: Hono,
     pool: Pool,
     logger: (moduleName: string) => Logger
 ): Promise<void> {
-    const reviewQueue = await startQueues(logger);
-    startElasticSearch(logger);
-    securityMiddleware(app);
-    reviewErrorHandler(app);
-    standardMiddleware(app);
-    routesMiddleware(app, pool, reviewQueue, logger);
-    startServer(app, logger);
+    startElasticSearch(logger)
+    app = await setupHono(app, pool)
+    startServer(app, logger)
 }
 
 function securityMiddleware(app: Hono): void {
-    app.use(secureHeaders());
-    app.use(csrf());
+    app.use(secureHeaders())
+    app.use(csrf())
     app.use(
         timeout(LIMIT_TIMEOUT, () => {
             return new HTTPException(StatusCodes.REQUEST_TIMEOUT, {
                 message: `Request timeout after waiting ${LIMIT_TIMEOUT}ms. Please try again later.`
-            });
+            })
         })
-    );
+    )
     app.use(
         cors({
             origin: [`${API_GATEWAY_URL}`],
             credentials: true,
             allowMethods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"]
         })
-    );
+    )
 
     app.use(async (c: Context, next: Next) => {
-        const authorization = c.req.header("authorization");
+        const authorization = c.req.header("authorization")
         if (authorization && authorization !== "") {
-            const token = authorization.split(" ")[1];
-            const payload = jwt.verify(token, JWT_TOKEN!) as IAuthPayload;
-            c.set("currentUser", payload);
+            const token = authorization.split(" ")[1]
+            const payload = jwt.verify(token, JWT_TOKEN!) as IAuthPayload
+            c.set("currentUser", payload)
         }
 
-        await next();
-    });
+        await next()
+    })
 }
 
 function standardMiddleware(app: Hono): void {
-    app.use(compress());
+    app.use(logger())
+    app.use(compress())
     app.use(
         bodyLimit({
             maxSize: 2 * 100 * 1000 * 1024, // 200mb
@@ -75,17 +95,17 @@ function standardMiddleware(app: Hono): void {
                 return c.text(
                     "Your request is too big",
                     StatusCodes.REQUEST_HEADER_FIELDS_TOO_LARGE
-                );
+                )
             }
         })
-    );
+    )
 
     const generateRandomNumber = (length: number): number => {
         return (
             Math.floor(Math.random() * (9 * Math.pow(10, length - 1))) +
             Math.pow(10, length - 1)
-        );
-    };
+        )
+    }
 
     app.use(
         rateLimiter({
@@ -94,7 +114,7 @@ function standardMiddleware(app: Hono): void {
             standardHeaders: "draft-6",
             keyGenerator: () => generateRandomNumber(12).toString()
         })
-    );
+    )
 }
 
 function routesMiddleware(
@@ -103,20 +123,20 @@ function routesMiddleware(
     queue: ReviewQueue,
     logger: (moduleName: string) => Logger
 ): void {
-    appRoutes(app, pool, queue, logger);
+    appRoutes(app, pool, queue, logger)
 }
 
 async function startQueues(
     logger: (moduleName: string) => Logger
 ): Promise<ReviewQueue> {
-    const reviewQueue = new ReviewQueue(null, logger);
-    await reviewQueue.createConnection();
-    return reviewQueue;
+    const reviewQueue = new ReviewQueue(null, logger)
+    await reviewQueue.createConnection()
+    return reviewQueue
 }
 
 function startElasticSearch(logger: (moduleName: string) => Logger): void {
-    const elasticClient = new ElasticSearchClient(logger);
-    elasticClient.checkConnection();
+    const elasticClient = new ElasticSearchClient(logger)
+    elasticClient.checkConnection()
 }
 
 function reviewErrorHandler(app: Hono): void {
@@ -126,16 +146,16 @@ function reviewErrorHandler(app: Hono): void {
                 err.serializeErrors(),
                 (err.statusCode as StatusCode) ??
                     StatusCodes.INTERNAL_SERVER_ERROR
-            );
+            )
         } else if (err instanceof HTTPException) {
-            return err.getResponse();
+            return err.getResponse()
         }
 
         return c.text(
-            "Unexpected erorr occured. Please try again",
+            "Unexpected error occurred. Please try again",
             StatusCodes.INTERNAL_SERVER_ERROR
-        );
-    });
+        )
+    })
 }
 
 async function startServer(
@@ -145,7 +165,7 @@ async function startServer(
     try {
         logger("server.ts - startServer()").info(
             `ReviewService has started with pid: ${process.pid}`
-        );
+        )
 
         serve(
             {
@@ -155,13 +175,13 @@ async function startServer(
             (info: any) => {
                 logger("server.ts - startServer()").info(
                     `ReviewService running on port ${info.port}`
-                );
+                )
             }
-        );
+        )
     } catch (error) {
         logger("server.ts - startServer()").error(
             "ReviewService startServer() method error:",
             error
-        );
+        )
     }
 }

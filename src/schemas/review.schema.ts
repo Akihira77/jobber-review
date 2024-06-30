@@ -1,4 +1,4 @@
-import Joi, { ObjectSchema } from "joi";
+import Joi, { ObjectSchema } from "joi"
 
 export const reviewSchema: ObjectSchema = Joi.object().keys({
     gigId: Joi.string().required(),
@@ -12,4 +12,4 @@ export const reviewSchema: ObjectSchema = Joi.object().keys({
     review: Joi.string().required(),
     reviewType: Joi.string().required(),
     createdAt: Joi.string().optional()
-});
+})

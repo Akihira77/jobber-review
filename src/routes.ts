@@ -1,16 +1,24 @@
-import { ReviewHandler } from "@review/handler/review.handler";
-import { Logger } from "winston";
-import { ReviewService } from "@review/services/review.service";
-import { Pool } from "pg";
-import { ReviewQueue } from "@review/queues/review.queue";
-import { Context, Hono, Next } from "hono";
-import { StatusCodes } from "http-status-codes";
-import { NotAuthorizedError } from "@Akihira77/jobber-shared";
-import jwt from "jsonwebtoken";
+import { ReviewHandler } from "@review/handler/review.handler"
+import { Logger } from "winston"
+import { ReviewService } from "@review/services/review.service"
+import { Pool } from "pg"
+import { ReviewQueue } from "@review/queues/review.queue"
+import { Context, Hono, Next } from "hono"
+import { StatusCodes } from "http-status-codes"
+import { NotAuthorizedError } from "@Akihira77/jobber-shared"
+import jwt from "jsonwebtoken"
+import { prometheus } from "@hono/prometheus"
+import { GATEWAY_JWT_TOKEN } from "./config"
 
-import { GATEWAY_JWT_TOKEN } from "./config";
+// const BASE_PATH = "/api/v1/review";
+const BASE_PATH = "review"
 
-const BASE_PATH = "/api/v1/review";
+const { printMetrics, registerMetrics } = prometheus()
+
+function metricRoutes(app: Hono) {
+    app.use(registerMetrics)
+    app.get("/metrics", printMetrics)
+}
 
 export function appRoutes(
     app: Hono,
@@ -18,19 +26,21 @@ export function appRoutes(
     queue: ReviewQueue,
     logger: (moduleName: string) => Logger
 ): void {
-    app.get("review-health", (c: Context) => {
-        return c.text("Review service is healthy and OK.", StatusCodes.OK);
-    });
+    metricRoutes(app)
 
-    const reviewSvc = new ReviewService(pool, logger);
-    const reviewHndlr = new ReviewHandler(reviewSvc, queue);
-    const api = app.basePath(BASE_PATH);
-    api.use(verifyGatewayRequest);
+    app.get("review-health", (c: Context) => {
+        return c.text("Review service is healthy and OK.", StatusCodes.OK)
+    })
+
+    const reviewSvc = new ReviewService(pool, logger)
+    const reviewHndlr = new ReviewHandler(reviewSvc, queue)
+    const api = app.basePath(BASE_PATH)
+    api.use(verifyGatewayRequest, authOnly)
 
     api.get("/seller/:sellerId", async (c: Context) => {
         try {
-            const sellerId = c.req.param("sellerId");
-            const reviews = await reviewHndlr.findReviewsBySellerId(sellerId);
+            const sellerId = c.req.param("sellerId")
+            const reviews = await reviewHndlr.findReviewsBySellerId(sellerId)
 
             return c.json(
                 {
@@ -38,16 +48,17 @@ export function appRoutes(
                     reviews
                 },
                 StatusCodes.OK
-            );
+            )
         } catch (error) {
-            throw error;
+            console.log(error)
+            throw error
         }
-    });
+    })
 
     api.get("/gig/:gigId", async (c: Context) => {
         try {
-            const gigId = c.req.param("gigId");
-            const reviews = await reviewHndlr.findReviewsByGigId(gigId);
+            const gigId = c.req.param("gigId")
+            const reviews = await reviewHndlr.findReviewsByGigId(gigId)
 
             return c.json(
                 {
@@ -55,16 +66,17 @@ export function appRoutes(
                     reviews
                 },
                 StatusCodes.OK
-            );
+            )
         } catch (error) {
-            throw error;
+            console.log(error)
+            throw error
         }
-    });
+    })
 
     api.post("/", async (c: Context) => {
         try {
-            const jsonBody = await c.req.json();
-            const review = await reviewHndlr.addReview(jsonBody);
+            const jsonBody = await c.req.json()
+            const review = await reviewHndlr.addReview(jsonBody)
 
             return c.json(
                 {
@@ -72,22 +84,23 @@ export function appRoutes(
                     review
                 },
                 StatusCodes.OK
-            );
+            )
         } catch (error) {
-            throw error;
+            console.log(error)
+            throw error
         }
-    });
+    })
 
     // api.use(verifyGatewayRequest);
 }
 
 async function verifyGatewayRequest(c: Context, next: Next): Promise<void> {
-    const token = c.req.header("gatewayToken");
+    const token = c.req.header("gatewayToken")
     if (!token) {
         throw new NotAuthorizedError(
             "Invalid request",
             "verifyGatewayRequest() method: Request not coming from api gateway"
-        );
+        )
     }
 
     try {
@@ -95,16 +108,26 @@ async function verifyGatewayRequest(c: Context, next: Next): Promise<void> {
             token,
             GATEWAY_JWT_TOKEN!
         ) as {
-            id: string;
-            iat: number;
-        };
+            id: string
+            iat: number
+        }
 
-        c.set("gatewayToken", payload);
-        await next();
+        c.set("gatewayToken", payload)
+        await next()
     } catch (error) {
-        throw new NotAuthorizedError(
-            "Invalid request",
-            "verifyGatewayRequest() method: Request not coming from api gateway"
-        );
+        c.text("User cannot access the resource.", StatusCodes.FORBIDDEN)
+        return
     }
+}
+
+async function authOnly(c: Context, next: Next): Promise<void> {
+    const currUser = c.get("currentUser")
+    if (currUser && Object.keys(currUser).length > 0) {
+        return await next()
+    }
+
+    throw new NotAuthorizedError(
+        "User is not authenticated. Please signin first.",
+        "routes.ts - authOnly() method"
+    )
 }

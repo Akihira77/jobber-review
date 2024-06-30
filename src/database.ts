@@ -1,6 +1,5 @@
-import { POSTGRES_DB } from "@review/config";
-import { Pool } from "pg";
-import { Logger } from "winston";
+import { POSTGRES_DB } from "@review/config"
+import { Pool } from "pg"
 
 const createTableText = `
     CREATE TABLE IF NOT EXISTS public.reviews (
@@ -22,11 +21,9 @@ const createTableText = `
     CREATE INDEX IF NOT EXISTS "gigId_idx" ON public.reviews ("gigId");
 
     CREATE INDEX IF NOT EXISTS "sellerId_idx" ON public.reviews ("sellerId");
-`;
+`
 
-export async function databaseConnection(
-    logger: (moduleName: string) => Logger
-): Promise<Pool> {
+export async function databaseConnection(): Promise<Pool> {
     try {
         const pool: Pool = new Pool({
             host: "localhost",
@@ -34,18 +31,14 @@ export async function databaseConnection(
             connectionString: `${POSTGRES_DB}`,
             max: 50,
             idleTimeoutMillis: 10_000 // 10 seconds
-        });
+        })
 
-        await pool.query(createTableText);
+        await pool.query(createTableText)
 
         // await pool.end();
-        return pool;
+        return pool
     } catch (error) {
-        logger("database.ts - databaseConnection()").error(
-            "ReviewService PostgreSQL connection error.",
-            error
-        );
-
-        process.exit(1);
+        console.log(error)
+        process.exit(1)
     }
 }

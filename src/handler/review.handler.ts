@@ -2,11 +2,11 @@ import {
     BadRequestError,
     IReviewDocument,
     IReviewMessageDetails
-} from "@Akihira77/jobber-shared";
-import { exchangeNamesAndRoutingKeys } from "@review/config";
-import { ReviewQueue } from "@review/queues/review.queue";
-import { reviewSchema } from "@review/schemas/review.schema";
-import { ReviewService } from "@review/services/review.service";
+} from "@Akihira77/jobber-shared"
+import { exchangeNamesAndRoutingKeys } from "@review/config"
+import { ReviewQueue } from "@review/queues/review.queue"
+import { reviewSchema } from "@review/schemas/review.schema"
+import { ReviewService } from "@review/services/review.service"
 
 export class ReviewHandler {
     constructor(
@@ -15,15 +15,15 @@ export class ReviewHandler {
     ) {}
 
     async addReview(reqBody: any): Promise<IReviewDocument> {
-        const { error, value } = reviewSchema.validate(reqBody);
+        const { error, value } = reviewSchema.validate(reqBody)
         if (error?.details[0]) {
             throw new BadRequestError(
                 error.details[0].message,
                 "ReviewService Create review() method"
-            );
+            )
         }
 
-        const review = await this.reviewService.addReview(value);
+        const review = await this.reviewService.addReview(value)
 
         const messageDetails: IReviewMessageDetails = {
             gigId: review.gigId,
@@ -34,7 +34,7 @@ export class ReviewHandler {
             orderId: review.orderId,
             createdAt: review.createdAt.toString(),
             type: review.reviewType!
-        };
+        }
 
         await this.rmq.publishFanoutMessage(
             exchangeNamesAndRoutingKeys.reviewService.review.exchangeName,
@@ -43,20 +43,20 @@ export class ReviewHandler {
                 messageDetails
             }),
             "Review details sent to order and users services"
-        );
+        )
 
-        return review;
+        return review
     }
 
     async findReviewsByGigId(gigId: string): Promise<IReviewDocument[]> {
-        const reviews = await this.reviewService.getReviewsByGigId(gigId);
+        const reviews = await this.reviewService.getReviewsByGigId(gigId)
 
-        return reviews;
+        return reviews
     }
 
     async findReviewsBySellerId(sellerId: string): Promise<IReviewDocument[]> {
-        const reviews = await this.reviewService.getReviewsBySellerId(sellerId);
+        const reviews = await this.reviewService.getReviewsBySellerId(sellerId)
 
-        return reviews;
+        return reviews
     }
 }

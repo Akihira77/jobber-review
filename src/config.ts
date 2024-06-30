@@ -1,9 +1,9 @@
-import dotenv from "dotenv";
+import dotenv from "dotenv"
 
 if (process.env.NODE_ENV !== "production") {
-    dotenv.config({ path: "./.env" });
+    dotenv.config({ path: "./.env" })
 } else {
-    dotenv.config();
+    dotenv.config()
 }
 
 export const {
@@ -21,7 +21,7 @@ export const {
     ELASTIC_APM_SERVICE_NAME,
     ELASTIC_APM_USE_PATH_AS_TRANSACTION_NAME,
     ENABLE_APM
-} = process.env;
+} = process.env
 
 // if (NODE_ENV === "production" && ENABLE_APM == "1") {
 //     require("elastic-apm-node").start({
@@ -76,4 +76,4 @@ export const exchangeNamesAndRoutingKeys = {
             routingKey: "receive-sellers"
         }
     }
-};
+}
