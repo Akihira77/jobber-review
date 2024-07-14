@@ -29,8 +29,9 @@ export async function databaseConnection(): Promise<Pool> {
             host: "localhost",
             user: "jobber",
             connectionString: `${POSTGRES_DB}`,
-            max: 50,
-            idleTimeoutMillis: 10_000 // 10 seconds
+            max: 20,
+            idleTimeoutMillis: 30 * 60 * 1000, // 10 seconds
+            maxUses: 60 * 60 * 1000
         })
 
         await pool.query(createTableText)

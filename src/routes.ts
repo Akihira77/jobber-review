@@ -6,7 +6,7 @@ import { ReviewQueue } from "@review/queues/review.queue"
 import { Context, Hono, Next } from "hono"
 import { StatusCodes } from "http-status-codes"
 import { NotAuthorizedError } from "@Akihira77/jobber-shared"
-import jwt from "jsonwebtoken"
+import { createVerifier } from "fast-jwt"
 import { prometheus } from "@hono/prometheus"
 import { GATEWAY_JWT_TOKEN } from "./config"
 
@@ -104,13 +104,13 @@ async function verifyGatewayRequest(c: Context, next: Next): Promise<void> {
     }
 
     try {
-        const payload: { id: string; iat: number } = jwt.verify(
-            token,
-            GATEWAY_JWT_TOKEN!
-        ) as {
-            id: string
-            iat: number
-        }
+        const verifier = createVerifier({
+            key: `${GATEWAY_JWT_TOKEN}`,
+            cache: true,
+            cacheTTL: 24 * 60 * 60 * 1000, // 24 hours,
+            maxAge: 24 * 60 * 60 * 1000
+        })
+        const payload: { id: string; iat: number } = verifier(token)
 
         c.set("gatewayToken", payload)
         await next()

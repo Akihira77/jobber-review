@@ -6,7 +6,7 @@ import { secureHeaders } from "hono/secure-headers"
 import { timeout } from "hono/timeout"
 import { rateLimiter } from "hono-rate-limiter"
 import { cors } from "hono/cors"
-import jwt from "jsonwebtoken"
+import { createVerifier } from "fast-jwt"
 import { csrf } from "hono/csrf"
 import {
     CustomError,
@@ -17,6 +17,7 @@ import {
     API_GATEWAY_URL,
     ELASTIC_SEARCH_URL,
     JWT_TOKEN,
+    NODE_ENV,
     PORT
 } from "@review/config"
 import { appRoutes } from "@review/routes"
@@ -29,15 +30,22 @@ import { logger } from "hono/logger"
 import { ElasticSearchClient } from "./elasticsearch"
 import { ReviewQueue } from "./queues/review.queue"
 
-const LIMIT_TIMEOUT = 2 * 1000 // 2s
+const LIMIT_TIMEOUT = 3 * 1000 // 3s
 
-export async function setupHono(app: Hono, pool: Pool): Promise<Hono> {
-    const logger = (moduleName: string) =>
-        winstonLogger(
-            `${ELASTIC_SEARCH_URL}`,
-            moduleName ?? "server.ts",
-            "debug"
-        )
+export async function setupHono(
+    app: Hono,
+    pool: Pool,
+    logger?: (location?: string) => Logger
+): Promise<Hono> {
+    if (!logger) {
+        logger = (moduleName?: string) =>
+            winstonLogger(
+                `${ELASTIC_SEARCH_URL}`,
+                moduleName ?? "server.ts",
+                "debug"
+            )
+    }
+
     const reviewQueue = await startQueues(logger)
     reviewErrorHandler(app)
     securityMiddleware(app)
@@ -48,10 +56,10 @@ export async function setupHono(app: Hono, pool: Pool): Promise<Hono> {
 export async function start(
     app: Hono,
     pool: Pool,
-    logger: (moduleName: string) => Logger
+    logger: (moduleName?: string) => Logger
 ): Promise<void> {
     startElasticSearch(logger)
-    app = await setupHono(app, pool)
+    app = await setupHono(app, pool, logger)
     startServer(app, logger)
 }
 
@@ -76,8 +84,13 @@ function securityMiddleware(app: Hono): void {
     app.use(async (c: Context, next: Next) => {
         const authorization = c.req.header("authorization")
         if (authorization && authorization !== "") {
-            const token = authorization.split(" ")[1]
-            const payload = jwt.verify(token, JWT_TOKEN!) as IAuthPayload
+            const authBearer = authorization.split(" ")[1]
+            const verifier = createVerifier({
+                key: `${JWT_TOKEN}`,
+                cache: true,
+                cacheTTL: 30 * 60 * 1000
+            })
+            const payload = verifier(authBearer) as IAuthPayload
             c.set("currentUser", payload)
         }
 
@@ -86,7 +99,9 @@ function securityMiddleware(app: Hono): void {
 }
 
 function standardMiddleware(app: Hono): void {
-    app.use(logger())
+    if (NODE_ENV !== "production") {
+        app.use(logger())
+    }
     app.use(compress())
     app.use(
         bodyLimit({
