@@ -4,7 +4,6 @@ import { compress } from "hono/compress"
 import { bodyLimit } from "hono/body-limit"
 import { secureHeaders } from "hono/secure-headers"
 import { timeout } from "hono/timeout"
-import { rateLimiter } from "hono-rate-limiter"
 import { cors } from "hono/cors"
 import { createVerifier } from "fast-jwt"
 import { csrf } from "hono/csrf"
@@ -115,21 +114,16 @@ function standardMiddleware(app: Hono): void {
         })
     )
 
-    const generateRandomNumber = (length: number): number => {
-        return (
-            Math.floor(Math.random() * (9 * Math.pow(10, length - 1))) +
-            Math.pow(10, length - 1)
-        )
-    }
-
-    app.use(
-        rateLimiter({
-            windowMs: 1 * 60 * 1000, //60s
-            limit: 5,
-            standardHeaders: "draft-6",
-            keyGenerator: () => generateRandomNumber(12).toString()
-        })
-    )
+    //    app.use(
+    //        rateLimiter({
+    //            windowMs: 10 * 60 * 1000, // 600s
+    //            limit: 100,
+    //            standardHeaders: "draft-6",
+    //            keyGenerator: (c: Context) => {
+    //                return c.req.url
+    //            }
+    //        })
+    //    )
 }
 
 function routesMiddleware(
